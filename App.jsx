@@ -24,6 +24,7 @@ export default function App(){
   const [uploadCat,setUploadCat]=useState('')
   const [file,setFile]=useState(null)
   const [msg,setMsg]=useState('')
+  const [authMode,setAuthMode]=useState('login')
   const [loading,setLoading]=useState(true)
 
   async function load(){
@@ -51,7 +52,7 @@ export default function App(){
   async function handleLogin(e){
     e.preventDefault()
     if(!isConfigured) return setMsg('ยังไม่ได้ตั้งค่า VITE_SUPABASE_URL / KEY ใน Vercel')
-    const {data,error} = await supabase.auth.signInWithPassword({email,password})
+    if(authMode==='signup'){ const {data,error}=await supabase.auth.signUp({email,password}); if(error) return setMsg('สมัครไม่สำเร็จ: '+error.message); setUser(data.user); setMsg('สมัครสำเร็จ! กำลังไปหน้าอัปโหลด...'); setView('upload'); return } const {data,error} = await supabase.auth.signInWithPassword({email,password})
     if(error) {
       const {error: e2} = await supabase.auth.signUp({email,password})
       if(e2) setMsg(e2.message); else setMsg('สมัครแล้ว เช็คอีเมลยืนยัน แล้วล็อกอินอีกครั้ง')
@@ -82,7 +83,7 @@ export default function App(){
       <div onClick={()=>setView('home')} style={{fontFamily:'Space Grotesk',fontWeight:800,fontSize:26,cursor:'pointer'}}>BLOX<span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}> VIDEO</span></div>
       <div style={{display:'flex',gap:10}}>
         <button onClick={()=>setView('home')} style={btn}>🏠 หน้าแรก</button>
-        <button onClick={()=>setView(user?'upload':'login')} style={{...btn,background:'#7c3aed',color:'#fff',border:'none'}}>⬆ อัปโหลด</button>
+        <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',fontWeight:700}}>👤 สมัครสมาชิก</button><button onClick={()=>setView(user?'upload':'login')} style={{...btn,background:'#7c3aed',color:'#fff',border:'none'}}>⬆ อัปโหลด</button>
         <span style={{fontSize:12,padding:'8px 10px',background:isConfigured?'#14532d':'#7f1d1d',borderRadius:20}}>{isConfigured?'● เชื่อม Supabase แล้ว':'○ โหมดตัวอย่าง - ยังไม่ตั้งค่า Env'}</span>
       </div>
     </header>
@@ -114,9 +115,9 @@ export default function App(){
       <h2>{selected.title}</h2><p style={{color:'#aaa'}}>{selected.description}</p><span style={{background:'#7c3aed',padding:'4px 10px',borderRadius:999,fontSize:12}}>{selected.category}</span>
     </main>}
 
-    {view==='login' && <main style={{maxWidth:420,margin:'40px auto',background:'#15151f',padding:24,borderRadius:16}}><h2>เข้าสู่ระบบ / สมัคร</h2><p style={{color:'#aaa',fontSize:13}}>ถ้ายังไม่มีบัญชี ระบบจะสมัครให้อัตโนมัติ</p><form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:12}}><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="อีเมล" style={inp}/><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="รหัสผ่าน" style={inp}/><button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:12}}>เข้าสู่ระบบ</button></form><p>{msg}</p></main>}
+    {view==='login' && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,border:'1px solid #333'}}><div style={{textAlign:'center'}}><div style={{fontSize:48}}>👤</div><h2>{authMode==='signup'?'สมัครสมาชิกฟรี':'เข้าสู่ระบบ'}</h2><p style={{color:'#aaa',fontSize:13}}>{authMode==='signup'?'สมัครครั้งเดียว อัปโหลดวิดีโอได้เลย':'มีบัญชีแล้ว? ล็อกอินเพื่ออัปโหลด'}</p></div><div style={{display:'flex',gap:8,marginBottom:16}}><button onClick={()=>setAuthMode('login')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='login'?'#fff':'#222',color:authMode==='login'?'#000':'#fff',fontWeight:700}}>เข้าสู่ระบบ</button><button onClick={()=>setAuthMode('signup')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='signup'?'#7c3aed':'#222',color:'#fff',fontWeight:700}}>สมัครสมาชิก</button></div><form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:12}}><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="อีเมล เช่น sabmangkang@gmail.com" style={inp}/><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" style={inp}/><button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontWeight:700,fontSize:16}}>{authMode==='signup'?'✅ สมัครสมาชิกฟรี':'🔑 เข้าสู่ระบบ'}</button></form><p style={{fontSize:13,color:'#aaa',textAlign:'center'}}>{authMode==='signup'?'สมัครแล้ว ระบบจะพาไปหน้าอัปโหลดทันที':'ยังไม่มีบัญชี? กดปุ่ม สมัครสมาชิก ด้านบน'}</p><p>{msg}</p></main>}
 
-    {view==='upload' && <main style={{maxWidth:560,margin:'40px auto',background:'#15151f',padding:24,borderRadius:16}}><h2>อัปโหลดวิดีโอ</h2><p style={{color:'#aaa',fontSize:13}}>ผู้ใช้: {user?.email} • ไฟล์จะเข้า bucket video-library-private แบบ private • สถานะเริ่มต้น pending</p>
+    {view==='upload' && !user && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,textAlign:'center'}}><div style={{fontSize:48}}>🔒</div><h2>ต้องสมัครสมาชิกก่อนอัปโหลด</h2><p style={{color:'#aaa'}}>สมัครฟรี 1 นาที แล้วอัปโหลดวิดีโอได้เลย</p><button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontSize:16,fontWeight:700}}>👤 สมัครสมาชิกฟรี</button><br/><br/><button onClick={()=>{setAuthMode('login'); setView('login')}} style={btn}>มีบัญชีแล้ว? เข้าสู่ระบบ</button></main>}{view==='upload' && user && <main style={{maxWidth:560,margin:'40px auto',background:'#15151f',padding:24,borderRadius:16}}><h2>อัปโหลดวิดีโอ</h2><p style={{color:'#aaa',fontSize:13}}>ผู้ใช้: {user?.email} • ไฟล์จะเข้า bucket video-library-private แบบ private • สถานะเริ่มต้น pending</p>
       <form onSubmit={handleUpload} style={{display:'flex',flexDirection:'column',gap:12}}>
         <input value={uploadTitle} onChange={e=>setUploadTitle(e.target.value)} placeholder="ชื่อวิดีโอ" required style={inp}/>
         <textarea value={uploadDesc} onChange={e=>setUploadDesc(e.target.value)} placeholder="คำอธิบาย" style={{...inp,minHeight:80}}/>
