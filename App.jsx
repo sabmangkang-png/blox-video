@@ -91,7 +91,7 @@ export default function App(){
     {view==='home' && <>
       {/* Hook Video - วิดีโอเด่นโชว์ด้านบนสุด */}
       {videos.length>0 && <section style={{maxWidth:1000,margin:'24px auto 0',padding:'0 20px'}}><div onClick={()=>openVideo(videos.find(v=>v.is_featured) || videos[0])} style={{position:'relative',borderRadius:24,overflow:'hidden',cursor:'pointer',aspectRatio:'16/7',background:'#000',border:'1px solid #333',boxShadow:'0 20px 50px rgba(0,0,0,.5)'}}>
-        {thumbUrls[(videos.find(v=>v.is_featured) || videos[0]).id] ? <video src={thumbUrls[(videos.find(v=>v.is_featured) || videos[0]).id]} autoPlay muted loop playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',background:'linear-gradient(90deg,#7c3aed,#06b6d4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:80}}>▶️</div>}
+        {thumbUrls[(videos.find(v=>v.is_featured) || videos[0]).id] ? <video src={thumbUrls[(videos.find(v=>v.is_featured) || videos[0]).id]} preload='metadata' muted playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',background:'linear-gradient(90deg,#7c3aed,#06b6d4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:80}}>▶️</div>}
         <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,transparent 30%,rgba(0,0,0,.85))'}}></div>
         <div style={{position:'absolute',bottom:20,left:24,right:24,textAlign:'left'}}><span style={{background:'#ef4444',padding:'4px 12px',borderRadius:999,fontSize:12,fontWeight:800}}>🔥 วิดีโอแนะนำ • HOOK</span><h2 style={{margin:'10px 0 6px',fontSize:28,lineHeight:1.2}}>{(videos.find(v=>v.is_featured) || videos[0]).title}</h2><p style={{color:'#ddd',fontSize:14,margin:0}}>{(videos.find(v=>v.is_featured) || videos[0]).description || 'กดเพื่อรับชมทันที'}</p></div>
         <div style={{position:'absolute',top:16,right:16,width:64,height:64,borderRadius:'50%',background:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26}}>▶</div>
@@ -144,3 +144,6 @@ export default function App(){
 const btn={padding:'8px 14px',borderRadius:999,border:'1px solid #333',background:'#1e1e2a',color:'#fff'}
 const inp={padding:'12px',borderRadius:10,border:'1px solid #333',background:'#0a0a0f',color:'#fff'}
 
+
+       
+   
