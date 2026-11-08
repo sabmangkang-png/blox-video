@@ -1,0 +1,5 @@
+✅ Supabase: รัน supabase-extensions.sql แล้ว
+✅ GitHub: อัปโหลดโฟลเดอร์ blox-final แล้ว
+✅ Vercel: Import + ใส่ Env 2 ตัว + Deploy แล้ว
+✅ ทดสอบ: Login > Upload > เปลี่ยน status เป็น published > เล่นได้
+ลิงก์เว็บของคุณ: https://____.vercel.app
