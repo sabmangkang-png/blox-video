@@ -70,9 +70,9 @@ export default function App(){
     if(upErr) return setMsg('อัปโหลดไม่สำเร็จ: '+upErr.message)
     // หา category id
     const {data: catRow} = await supabase.from('video_categories').select('id').eq('name', uploadCat || categories[0]).single()
-    const {error: insErr} = await supabase.from('videos').insert({id: videoId, title: uploadTitle, description: uploadDesc, category_id: catRow?.id, owner_id: user.id, file_path: path, file_size: file.size, mime_type: file.type, status:'pending'})
+    const {error: insErr} = await supabase.from('videos').insert({id: videoId, title: uploadTitle, description: uploadDesc, category_id: catRow?.id, owner_id: user.id, file_path: path, file_size: file.size, mime_type: file.type, status:'published'})
     if(insErr) return setMsg('บันทึกข้อมูลไม่สำเร็จ: '+insErr.message)
-    setMsg('อัปโหลดสำเร็จ! สถานะ pending รอแอดมินอนุมัติใน Supabase Dashboard')
+    setMsg('อัปโหลดสำเร็จ! สถานะ published เผยแพร่แล้ว ดูได้ทันทีใน Supabase Dashboard')
     setUploadTitle(''); setUploadDesc(''); setFile(null); load()
   }
 
@@ -83,7 +83,7 @@ export default function App(){
       <div onClick={()=>setView('home')} style={{fontFamily:'Space Grotesk',fontWeight:800,fontSize:26,cursor:'pointer'}}>BLOX<span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}> VIDEO</span></div>
       <div style={{display:'flex',gap:10}}>
         <button onClick={()=>setView('home')} style={btn}>🏠 หน้าแรก</button>
-        <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',fontWeight:700}}>👤 สมัครสมาชิก</button><button onClick={()=>setView(user?'upload':'login')} style={{...btn,background:'#7c3aed',color:'#fff',border:'none'}}>⬆ อัปโหลด</button>
+        <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',fontWeight:700}}>👤 สมัครสมาชิก</button>
         <span style={{fontSize:12,padding:'8px 10px',background:isConfigured?'#14532d':'#7f1d1d',borderRadius:20}}>{isConfigured?'● เชื่อม Supabase แล้ว':'○ โหมดตัวอย่าง - ยังไม่ตั้งค่า Env'}</span>
       </div>
     </header>
@@ -117,14 +117,14 @@ export default function App(){
 
     {view==='login' && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,border:'1px solid #333'}}><div style={{textAlign:'center'}}><div style={{fontSize:48}}>👤</div><h2>{authMode==='signup'?'สมัครสมาชิกฟรี':'เข้าสู่ระบบ'}</h2><p style={{color:'#aaa',fontSize:13}}>{authMode==='signup'?'สมัครครั้งเดียว อัปโหลดวิดีโอได้เลย':'มีบัญชีแล้ว? ล็อกอินเพื่ออัปโหลด'}</p></div><div style={{display:'flex',gap:8,marginBottom:16}}><button onClick={()=>setAuthMode('login')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='login'?'#fff':'#222',color:authMode==='login'?'#000':'#fff',fontWeight:700}}>เข้าสู่ระบบ</button><button onClick={()=>setAuthMode('signup')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='signup'?'#7c3aed':'#222',color:'#fff',fontWeight:700}}>สมัครสมาชิก</button></div><form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:12}}><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="อีเมล เช่น sabmangkang@gmail.com" style={inp}/><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" style={inp}/><button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontWeight:700,fontSize:16}}>{authMode==='signup'?'✅ สมัครสมาชิกฟรี':'🔑 เข้าสู่ระบบ'}</button></form><p style={{fontSize:13,color:'#aaa',textAlign:'center'}}>{authMode==='signup'?'สมัครแล้ว ระบบจะพาไปหน้าอัปโหลดทันที':'ยังไม่มีบัญชี? กดปุ่ม สมัครสมาชิก ด้านบน'}</p><p>{msg}</p></main>}
 
-    {view==='upload' && !user && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,textAlign:'center'}}><div style={{fontSize:48}}>🔒</div><h2>ต้องสมัครสมาชิกก่อนอัปโหลด</h2><p style={{color:'#aaa'}}>สมัครฟรี 1 นาที แล้วอัปโหลดวิดีโอได้เลย</p><button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontSize:16,fontWeight:700}}>👤 สมัครสมาชิกฟรี</button><br/><br/><button onClick={()=>{setAuthMode('login'); setView('login')}} style={btn}>มีบัญชีแล้ว? เข้าสู่ระบบ</button></main>}{view==='upload' && user && <main style={{maxWidth:560,margin:'40px auto',background:'#15151f',padding:24,borderRadius:16}}><h2>อัปโหลดวิดีโอ</h2><p style={{color:'#aaa',fontSize:13}}>ผู้ใช้: {user?.email} • ไฟล์จะเข้า bucket video-library-private แบบ private • สถานะเริ่มต้น pending</p>
+    {view==='upload' && !user && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,textAlign:'center'}}><div style={{fontSize:48}}>🔒</div><h2>ต้องสมัครสมาชิกก่อนอัปโหลด</h2><p style={{color:'#aaa'}}>สมัครฟรี 1 นาที แล้วอัปโหลดวิดีโอได้เลย</p><button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontSize:16,fontWeight:700}}>👤 สมัครสมาชิกฟรี</button><br/><br/><button onClick={()=>{setAuthMode('login'); setView('login')}} style={btn}>มีบัญชีแล้ว? เข้าสู่ระบบ</button></main>}{view==='upload' && user && <main style={{maxWidth:560,margin:'40px auto',background:'#15151f',padding:24,borderRadius:16}}><h2>อัปโหลดวิดีโอ</h2><p style={{color:'#aaa',fontSize:13}}>ผู้ใช้: {user?.email} • ไฟล์จะเข้า bucket video-library-private แบบ private • สถานะเริ่มต้น published</p>
       <form onSubmit={handleUpload} style={{display:'flex',flexDirection:'column',gap:12}}>
         <input value={uploadTitle} onChange={e=>setUploadTitle(e.target.value)} placeholder="ชื่อวิดีโอ" required style={inp}/>
         <textarea value={uploadDesc} onChange={e=>setUploadDesc(e.target.value)} placeholder="คำอธิบาย" style={{...inp,minHeight:80}}/>
         <select value={uploadCat} onChange={e=>setUploadCat(e.target.value)} style={inp}>{categories.map(c=><option key={c}>{c}</option>)}</select>
         <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={e=>setFile(e.target.files[0])} style={inp}/>
         {file && <p style={{fontSize:13}}>ไฟล์: {file.name} • {(file.size/1024/1024).toFixed(2)} MB {file.size>100*1024*1024 && '⚠️ เกิน 100MB ตาม limit bucket'}</p>}
-        <button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:12}}>อัปโหลด (จะได้สถานะ pending)</button>
+        <button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:12}}>อัปโหลด (จะได้สถานะ published)</button>
       </form><p>{msg}</p>
       <div style={{background:'#0a0a0f',padding:12,borderRadius:10,fontSize:12,color:'#aaa',marginTop:12}}>ขั้นตอนอนุมัติ: Supabase Dashboard → Table Editor → videos → เปลี่ยน status เป็น published + ใส่ published_at = now() → วิดีโอจะโชว์หน้าแรกทันที</div>
     </main>}
@@ -134,3 +134,4 @@ export default function App(){
 }
 const btn={padding:'8px 14px',borderRadius:999,border:'1px solid #333',background:'#1e1e2a',color:'#fff'}
 const inp={padding:'12px',borderRadius:10,border:'1px solid #333',background:'#0a0a0f',color:'#fff'}
+
