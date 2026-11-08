@@ -26,7 +26,6 @@ export default function App(){
   const [msg,setMsg]=useState('')
   const [authMode,setAuthMode]=useState('login')
   const [loading,setLoading]=useState(true)
-  const [thumbUrls,setThumbUrls]=useState({})
 
   async function load(){
     setLoading(true)
@@ -39,24 +38,7 @@ export default function App(){
     }
     setLoading(false)
   }
-  useEffect(()=>{ load();
-  // โหลดภาพตัวอย่างวิดีโอทุกคลิป (ใช้ Signed URL เดียวกับตอนเล่น แต่ preload แค่ภาพแรก)
-  useEffect(()=>{
-    async function loadThumbs(){
-      if(!isConfigured || videos.length===0) return
-      const urls={}
-      for(const v of videos){
-        if(v.file_path){
-          try{
-            const {data} = await supabase.storage.from(BUCKET).createSignedUrl(v.file_path, 3600)
-            if(data?.signedUrl) urls[v.id]=data.signedUrl
-          }catch(e){}
-        }
-      }
-      setThumbUrls(urls)
-    }
-    loadThumbs()
-  },[videos.length]) if(isConfigured) supabase.auth.getSession().then(({data})=>setUser(data.session?.user||null)) },[])
+  useEffect(()=>{ load(); if(isConfigured) supabase.auth.getSession().then(({data})=>setUser(data.session?.user||null)) },[])
 
   async function getSignedUrl(file_path){
     if(!file_path) return null
@@ -110,6 +92,8 @@ export default function App(){
       <section style={{padding:'48px 28px 20px',textAlign:'center'}}>
         <h1 style={{fontSize:44,margin:0,lineHeight:1.1}}>คลังวิดีโอของคุณ<br/><span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}>สวย ทันสมัย เก็บเป็นหมวดหมู่</span></h1>
         <p style={{color:'#aaa'}}>ฟรีด้วย Supabase + Vercel • อัปโหลดแล้วรออนุมัติ • เล่นผ่าน Signed URL แบบ Private</p>
+        {/* ปุ่มอัปโหลดจุดเดียว - อยู่เหนือช่องค้นหา อยู่ตลอดทุกหมวดหมู่ ไม่หาย */}
+        <div style={{textAlign:'center',margin:'0 0 20px'}}>{user ? <button onClick={()=>setView('upload')} style={{...btn,background:'linear-gradient(90deg,#7c3aed,#06b6d4)',color:'#fff',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999,boxShadow:'0 8px 24px rgba(124,58,237,.4)'}}>⬆ อัปโหลดวิดีโอของคุณ</button> : <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999}}>👤 สมัครสมาชิกเพื่ออัปโหลด</button>}<p style={{color:'#888',fontSize:12,margin:'8px 0 0'}}>อัปโหลดแล้วขึ้นหน้าแรกทันที • ดูฟรี</p></div>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 ค้นหาวิดีโอ..." style={{width:'min(560px,90%)',padding:'14px 18px',borderRadius:999,border:'1px solid #333',background:'#15151f',color:'#fff',fontSize:16,marginTop:16}}/>
         <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap',marginTop:18}}>{['ทั้งหมด',...categories].map(c=><button key={c} onClick={()=>setCat(c)} style={{padding:'8px 16px',borderRadius:999,border:'none',background:cat===c?'#fff':'#1e1e2a',color:cat===c?'#000':'#fff',fontWeight:600}}>{c}</button>)}</div>
       </section>
@@ -117,15 +101,9 @@ export default function App(){
         {loading && <p>กำลังโหลด...</p>}
         {!loading && filtered.length===0 && <div style={{gridColumn:'1/-1',textAlign:'center',padding:40,background:'#15151f',borderRadius:16}}><h3>ยังไม่มีวิดีโอในหมวดนี้</h3><p style={{color:'#aaa'}}>กดอัปโหลด แล้วไปเปลี่ยน status เป็น published ใน Supabase Dashboard</p><button onClick={()=>setView('upload')} style={{...btn,background:'#7c3aed',color:'#fff',border:'none'}}>อัปโหลดวิดีโอแรก</button></div>}
         {filtered.map(v=>(
-          <article key={v.id} onClick={()=>openVideo(v)} style={{background:'linear-gradient(180deg,#1a1a2e,#15151f)',borderRadius:20,overflow:'hidden',cursor:'pointer',border:'1px solid #2a2a3f',boxShadow:'0 10px 30px rgba(0,0,0,.4)',transition:'transform .2s'}} onMouseEnter={e=>e.currentTarget.style.transform='translateY(-4px) scale(1.01)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-            <div style={{position:'relative',aspectRatio:'16/9',background:'#000',overflow:'hidden'}}>
-              {thumbUrls[v.id] ? <video src={thumbUrls[v.id]+'#t=0.1'} preload='metadata' muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} onMouseEnter={e=>e.target.play()} onMouseLeave={e=>{e.target.pause(); e.target.currentTime=0}} /> : <div style={{width:'100%',height:'100%',background:v.cover,display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{fontSize:52,filter:'drop-shadow(0 4px 12px rgba(0,0,0,.6))'}}>▶️</div></div>}
-              <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,transparent 55%,rgba(0,0,0,.75))',pointerEvents:'none'}}></div>
-              <div style={{position:'absolute',top:10,left:10,background:'#7c3aed',padding:'4px 10px',borderRadius:999,fontSize:12,fontWeight:700}}>{v.category}</div>
-              <div style={{position:'absolute',bottom:10,right:10,background:'rgba(0,0,0,.75)',padding:'4px 8px',borderRadius:8,fontSize:12}}>▶ {v.duration}</div>
-              <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}><div style={{width:64,height:64,borderRadius:'50%',background:'rgba(255,255,255,.95)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,boxShadow:'0 8px 24px rgba(0,0,0,.5)'}}>▶</div></div>
-            </div>
-            <div style={{padding:16}}><h3 style={{margin:'0 0 6px',fontSize:18,lineHeight:1.3}}>{v.title}</h3><p style={{color:'#aaa',fontSize:13,margin:'0 0 10px',lineHeight:1.5,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{v.description || 'กดเพื่อรับชมวิดีโอนี้'}</p><div style={{display:'flex',gap:8,alignItems:'center'}}><span style={{fontSize:12,background:'#222',padding:'4px 10px',borderRadius:999}}>📅 {v.created_at ? new Date(v.created_at).toLocaleDateString('th-TH') : 'วันนี้'}</span><span style={{fontSize:12,color:'#a855f7',fontWeight:700}}>▶ ดูวิดีโอ →</span></div></div>
+          <article key={v.id} onClick={()=>openVideo(v)} style={{background:'#15151f',borderRadius:16,overflow:'hidden',cursor:'pointer',border:'1px solid #26263a'}}>
+            <div style={{height:150,background:v.cover,display:'flex',alignItems:'center',justifyContent:'center',fontSize:44}}>▶️<span style={{position:'absolute'}}></span><span style={{fontSize:12,background:'rgba(0,0,0,.6)',padding:'4px 8px',borderRadius:8,marginLeft:120}}>{v.duration}</span></div>
+            <div style={{padding:14}}><span style={{fontSize:12,background:'#7c3aed',padding:'3px 8px',borderRadius:999}}>{v.category}</span><h3 style={{margin:'10px 0 6px'}}>{v.title}</h3><p style={{color:'#aaa',fontSize:13,margin:0}}>{v.description}</p></div>
           </article>
         ))}
       </main>
@@ -136,7 +114,7 @@ export default function App(){
       <div style={{marginTop:16,aspectRatio:'16/9',background:'#000',borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
         {selected.playUrl ? <video src={selected.playUrl} controls style={{width:'100%',height:'100%'}}/> : <div style={{textAlign:'center'}}><div style={{fontSize:60}}>▶️</div><p>{isConfigured?'กำลังสร้าง Signed URL...':'โหมดตัวอย่าง - ตั้งค่า Supabase แล้ววิดีโอจะเล่นได้จริง'}</p><p style={{color:'#aaa',fontSize:13}}>ไฟล์: {selected.file_path||'ตัวอย่าง'}</p></div>}
       </div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:16}}><h2 style={{margin:0}}>{selected.title}</h2><button onClick={()=>{navigator.clipboard?.writeText(window.location.href); alert('ก๊อปลิงก์แล้ว! แชร์ให้เพื่อนได้เลย')}} style={{...btn,background:'#7c3aed',color:'#fff',border:'none'}}>🔗 แชร์</button></div><p style={{color:'#aaa',lineHeight:1.6}}>{selected.description || 'ไม่มีคำอธิบาย'}</p><span style={{background:'#7c3aed',padding:'4px 10px',borderRadius:999,fontSize:12}}>{selected.category}</span>
+      <h2>{selected.title}</h2><p style={{color:'#aaa'}}>{selected.description}</p><span style={{background:'#7c3aed',padding:'4px 10px',borderRadius:999,fontSize:12}}>{selected.category}</span>
     </main>}
 
     {view==='login' && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,border:'1px solid #333'}}><div style={{textAlign:'center'}}><div style={{fontSize:48}}>👤</div><h2>{authMode==='signup'?'สมัครสมาชิกฟรี':'เข้าสู่ระบบ'}</h2><p style={{color:'#aaa',fontSize:13}}>{authMode==='signup'?'สมัครครั้งเดียว อัปโหลดวิดีโอได้เลย':'มีบัญชีแล้ว? ล็อกอินเพื่ออัปโหลด'}</p></div><div style={{display:'flex',gap:8,marginBottom:16}}><button onClick={()=>setAuthMode('login')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='login'?'#fff':'#222',color:authMode==='login'?'#000':'#fff',fontWeight:700}}>เข้าสู่ระบบ</button><button onClick={()=>setAuthMode('signup')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='signup'?'#7c3aed':'#222',color:'#fff',fontWeight:700}}>สมัครสมาชิก</button></div><form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:12}}><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="อีเมล เช่น sabmangkang@gmail.com" style={inp}/><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" style={inp}/><button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontWeight:700,fontSize:16}}>{authMode==='signup'?'✅ สมัครสมาชิกฟรี':'🔑 เข้าสู่ระบบ'}</button></form><p style={{fontSize:13,color:'#aaa',textAlign:'center'}}>{authMode==='signup'?'สมัครแล้ว ระบบจะพาไปหน้าอัปโหลดทันที':'ยังไม่มีบัญชี? กดปุ่ม สมัครสมาชิก ด้านบน'}</p><p>{msg}</p></main>}
