@@ -35,7 +35,7 @@ export default function App(){
     if(cats) setCategories(cats.map(c=>c.name))
     const {data, error} = await supabase.from('videos').select('*, video_categories(name)').eq('status','published').order('created_at',{ascending:false})
     if(error){ setMsg('โหลดวิดีโอไม่สำเร็จ: '+error.message); setVideos([]) } else {
-      setVideos((data||[]).map(v=>({id:v.id,title:v.title,description:v.description,category:v.video_categories?.name||'อื่น ๆ',duration:v.duration_seconds?Math.floor(v.duration_seconds/60)+':'+String(v.duration_seconds%60).padStart(2,'0'):'--:--',status:v.status,file_path:v.file_path,cover:'linear-gradient(135deg,#7c3aed,#06b6d4)'})))
+      setVideos((data||[]).map(v=>({id:v.id,title:v.title,description:v.description,category:v.video_categories?.name||'อื่น ๆ',duration:v.duration_seconds?Math.floor(v.duration_seconds/60)+':'+String(v.duration_seconds%60).padStart(2,'0'):'00:00',status:v.status,file_path:v.file_path,cover:'linear-gradient(135deg,#7c3aed,#06b6d4)'})))
     }
     setLoading(false)
   }
@@ -83,7 +83,7 @@ export default function App(){
     <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 28px',position:'sticky',top:0,background:'rgba(10,10,15,.9)',backdropFilter:'blur(12px)',zIndex:10,borderBottom:'1px solid #222'}}>
       <div onClick={()=>setView('home')} style={{fontFamily:'Space Grotesk',fontWeight:800,fontSize:26,cursor:'pointer'}}>BLOX<span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}> VIDEO</span></div>
       <div style={{display:'flex',gap:10}}>
-        <button onClick={()=>setView('home')} style={btn}>🏠 หน้าแรก</button>
+        <button onClick={()=>setView('home')} style={btn}>🏠 หน้าแรก</button><button onClick={()=>{setView('approval'); loadPending()}} style={{...btn,background:view==='approval'?'#f59e0b':'#1e1e2a',color:view==='approval'?'#000':'#fff'}}>📥 รออนุมัติ {pendingVideos.length>0?`(${pendingVideos.length})`:''}</button>
         <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',fontWeight:700}}>👤 สมัครสมาชิก</button>
         <span style={{fontSize:12,padding:'8px 10px',background:isConfigured?'#14532d':'#7f1d1d',borderRadius:20}}>{isConfigured?'● เชื่อม Supabase แล้ว':'○ โหมดตัวอย่าง - ยังไม่ตั้งค่า Env'}</span>
       </div>
@@ -170,10 +170,6 @@ export default function App(){
       <div style={{background:'#0a0a0f',padding:12,borderRadius:10,fontSize:12,color:'#aaa',marginTop:12}}>ขั้นตอนอนุมัติ: Supabase Dashboard → Table Editor → videos → เปลี่ยน status เป็น published + ใส่ published_at = now() → วิดีโอจะโชว์หน้าแรกทันที</div>
     </main>}
 
-    <footer style={{textAlign:'center',padding:24,color:'#666',fontSize:13}}>BLOX Video Library • Supabase + Vercel Free • อย่าใส่ service_role key ในเว็บ</footer>
-  </div>
-}
-const btn={padding:'8px 14px',borderRadius:999,border:'1px solid #333',background:'#1e1e2a',color:'#fff'}
-const inp={padding:'12px',borderRadius:10,border:'1px solid #333',background:'#0a0a0f',color:'#fff'}
+    <footer style={{textAlign:'center',padding:24,color:'#666',fontSize:13}}>BLOX Video Library • Supabase + Vercel Free • อย่าใส่ service_rol
 
 
