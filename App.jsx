@@ -26,6 +26,7 @@ export default function App(){
   const [msg,setMsg]=useState('')
   const [authMode,setAuthMode]=useState('login')
   const [loading,setLoading]=useState(true)
+  const [pendingVideos,setPendingVideos]=useState([])
 
   async function load(){
     setLoading(true)
@@ -94,7 +95,7 @@ export default function App(){
         <h1 style={{fontSize:44,margin:0,lineHeight:1.1}}>คลังวิดีโอของคุณ<br/><span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}>สวย ทันสมัย เก็บเป็นหมวดหมู่</span></h1>
         <p style={{color:'#aaa'}}>ฟรีด้วย Supabase + Vercel • อัปโหลดแล้วรออนุมัติ • เล่นผ่าน Signed URL แบบ Private</p>
         {/* ปุ่มอัปโหลดจุดเดียว - อยู่เหนือช่องค้นหา อยู่ตลอดทุกหมวดหมู่ ไม่หาย */}
-        <div style={{textAlign:'center',margin:'0 0 20px'}}>{user ? <button onClick={()=>setView('upload')} style={{...btn,background:'linear-gradient(90deg,#7c3aed,#06b6d4)',color:'#fff',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999,boxShadow:'0 8px 24px rgba(124,58,237,.4)'}}>⬆ อัปโหลดวิดีโอของคุณ (ระบบจะแคปภาพปกให้อัตโนมัติ)</button> : <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999}}>👤 สมัครสมาชิกเพื่ออัปโหลด</button>}<p style={{color:'#888',fontSize:12,margin:'8px 0 0'}}>อัปโหลดแล้วขึ้นหน้าแรกทันที</p></div>
+        <div style={{textAlign:'center',margin:'0 0 20px'}}>{user ? <button onClick={()=>setView('upload')} style={{...btn,background:'linear-gradient(90deg,#7c3aed,#06b6d4)',color:'#fff',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999,boxShadow:'0 8px 24px rgba(124,58,237,.4)'}}>⬆ อัปโหลดวิดีโอของคุณ</button> : <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999}}>👤 สมัครสมาชิกเพื่ออัปโหลด</button>}<p style={{color:'#888',fontSize:12,margin:'8px 0 0'}}>อัปโหลดแล้วไปรอการอนุมัติก่อน</p></div>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 ค้นหาวิดีโอ..." style={{width:'min(560px,90%)',padding:'14px 18px',borderRadius:999,border:'1px solid #333',background:'#15151f',color:'#fff',fontSize:16,marginTop:16}}/>
         <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap',marginTop:18}}>{['ทั้งหมด',...categories].map(c=><button key={c} onClick={()=>setCat(c)} style={{padding:'8px 16px',borderRadius:999,border:'none',background:cat===c?'#fff':'#1e1e2a',color:cat===c?'#000':'#fff',fontWeight:600}}>{c}</button>)}</div>
       </section>
@@ -116,6 +117,43 @@ export default function App(){
         {selected.playUrl ? <video src={selected.playUrl} controls style={{width:'100%',height:'100%'}}/> : <div style={{textAlign:'center'}}><div style={{fontSize:60}}>▶️</div><p>{isConfigured?'กำลังสร้าง Signed URL...':'โหมดตัวอย่าง - ตั้งค่า Supabase แล้ววิดีโอจะเล่นได้จริง'}</p><p style={{color:'#aaa',fontSize:13}}>ไฟล์: {selected.file_path||'ตัวอย่าง'}</p></div>}
       </div>
       <h2>{selected.title}</h2><p style={{color:'#aaa'}}>{selected.description}</p><span style={{background:'#7c3aed',padding:'4px 10px',borderRadius:999,fontSize:12}}>{selected.category}</span>
+    </main>}
+
+    
+    {view==='approval' && <main style={{maxWidth:900,margin:'0 auto',padding:'28px'}}>
+      <h1>📥 วิดีโอรอการอนุมัติ</h1>
+      <p style={{color:'#aaa'}}>คลิปจาก Meta AI / ที่อัปโหลดมา จะมารอตรงนี้ก่อน คุณกดอนุมัติถึงจะขึ้นหน้าแรก + โพสต์ลง Facebook/IG</p>
+      <div style={{background:'#1e1e2a',borderRadius:16,padding:16,marginBottom:20}}>
+        <h3 style={{margin:'0 0 8px'}}>🔗 วางลิงก์วิดีโอจาก Meta AI</h3>
+        <p style={{color:'#aaa',fontSize:13,margin:'0 0 12px'}}>Meta AI สร้างคลิปเสร็จ ได้ลิงก์มา → ก๊อปลิงก์มาวางตรงนี้ → กดส่งเพื่อรอการอนุมัติ</p>
+        <input id="metaLinkInput" placeholder="วางลิงก์ .mp4 จาก Meta AI ตรงนี้ เช่น https://.../video.mp4" style={{width:'100%',padding:12,borderRadius:12,border:'1px solid #333',background:'#15151f',color:'#fff',marginBottom:10}} />
+        <input id="metaTitleInput" placeholder="ชื่อคลิป เช่น ข่าววันนี้" style={{width:'100%',padding:12,borderRadius:12,border:'1px solid #333',background:'#15151f',color:'#fff',marginBottom:10}} />
+        <button onClick={async ()=>{
+          const link = document.getElementById('metaLinkInput').value.trim()
+          const title = document.getElementById('metaTitleInput').value.trim() || 'คลิปจาก Meta AI'
+          if(!link) return alert('วางลิงก์ก่อนนะ')
+          if(!user) return alert('ต้องสมัครสมาชิกก่อน')
+          // บันทึกเป็น pending_approval โดยใช้ link เป็น file_path ชั่วคราว
+          const {error} = await supabase.from('videos').insert({title, description:'คลิปจาก Meta AI - รอการอนุมัติ', file_path: link, storage_path: link, owner_id: user.id, status:'pending_approval'})
+          if(error) return alert('ส่งไม่สำเร็จ: '+error.message)
+          alert('✅ ส่งแล้ว! คลิปมารอในหน้ารออนุมัติแล้ว')
+          document.getElementById('metaLinkInput').value=''
+          document.getElementById('metaTitleInput').value=''
+          loadPending()
+        }} style={{...btn,background:'#f59e0b',color:'#000',border:'none',padding:'12px 24px',fontWeight:800}}>📥 ส่งเพื่อรอการอนุมัติ</button>
+      </div>
+      {pendingVideos.length===0 && <p style={{textAlign:'center',color:'#888',padding:40}}>ยังไม่มีคลิปรออนุมัติ 🎉</p>}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:16}}>
+        {pendingVideos.map(v=>(
+          <article key={v.id} style={{background:'#15151f',borderRadius:16,overflow:'hidden',border:'1px solid #333'}}>
+            <div style={{height:150,background:v.cover,display:'flex',alignItems:'center',justifyContent:'center',fontSize:40}}>🎬</div>
+            <div style={{padding:14}}><h3 style={{margin:'0 0 6px'}}>{v.title}</h3><p style={{color:'#aaa',fontSize:13,margin:'0 0 12px'}}>{v.description}</p><p style={{fontSize:12,color:'#888'}}>📅 {new Date(v.created_at).toLocaleDateString('th-TH')} • ⏳ รออนุมัติ</p>
+            <div style={{display:'flex',gap:8,marginTop:12}}><button onClick={()=>approveVideo(v)} style={{flex:1,background:'#22c55e',color:'#fff',border:'none',padding:10,borderRadius:10,fontWeight:700,cursor:'pointer'}}>✅ อนุมัติ</button><button onClick={()=>rejectVideo(v)} style={{flex:1,background:'#ef4444',color:'#fff',border:'none',padding:10,borderRadius:10,fontWeight:700,cursor:'pointer'}}>❌ ไม่เอา</button></div>
+            <button onClick={()=>openVideo(v)} style={{width:'100%',marginTop:8,background:'#222',color:'#fff',border:'none',padding:8,borderRadius:10,cursor:'pointer'}}>▶ ดูตัวอย่างก่อนอนุมัติ</button>
+            </div>
+          </article>
+        ))}
+      </div>
     </main>}
 
     {view==='login' && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,border:'1px solid #333'}}><div style={{textAlign:'center'}}><div style={{fontSize:48}}>👤</div><h2>{authMode==='signup'?'สมัครสมาชิกฟรี':'เข้าสู่ระบบ'}</h2><p style={{color:'#aaa',fontSize:13}}>{authMode==='signup'?'สมัครครั้งเดียว อัปโหลดวิดีโอได้เลย':'มีบัญชีแล้ว? ล็อกอินเพื่ออัปโหลด'}</p></div><div style={{display:'flex',gap:8,marginBottom:16}}><button onClick={()=>setAuthMode('login')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='login'?'#fff':'#222',color:authMode==='login'?'#000':'#fff',fontWeight:700}}>เข้าสู่ระบบ</button><button onClick={()=>setAuthMode('signup')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='signup'?'#7c3aed':'#222',color:'#fff',fontWeight:700}}>สมัครสมาชิก</button></div><form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:12}}><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="อีเมล เช่น sabmangkang@gmail.com" style={inp}/><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" style={inp}/><button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontWeight:700,fontSize:16}}>{authMode==='signup'?'✅ สมัครสมาชิกฟรี':'🔑 เข้าสู่ระบบ'}</button></form><p style={{fontSize:13,color:'#aaa',textAlign:'center'}}>{authMode==='signup'?'สมัครแล้ว ระบบจะพาไปหน้าอัปโหลดทันที':'ยังไม่มีบัญชี? กดปุ่ม สมัครสมาชิก ด้านบน'}</p><p>{msg}</p></main>}
