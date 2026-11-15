@@ -66,7 +66,9 @@ export default function App(){
     if(!file) return setMsg('เลือกไฟล์วิดีโอ MP4/WebM/MOV ก่อน (ไม่เกิน 100MB)')
     setMsg('กำลังอัปโหลด...')
     const videoId = crypto.randomUUID()
-    const path = `${user.id}/${videoId}/${file.name}`
+    const ext = file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'') || 'mp4'
+    const safeName = 'video-' + Date.now() + '.' + ext
+    const path = `${user.id}/${videoId}/${safeName}`
     const {error: upErr} = await supabase.storage.from(BUCKET).upload(path, file, {upsert:false})
     if(upErr) return setMsg('อัปโหลดไม่สำเร็จ: '+upErr.message)
     // หา category id
@@ -79,11 +81,22 @@ export default function App(){
 
   const filtered = videos.filter(v=> (cat==='ทั้งหมด'||v.category===cat) && v.title.toLowerCase().includes(q.toLowerCase()))
 
+
+  const deleteMyVideo = async (e, v) => {
+    if(e) e.stopPropagation()
+    if(!confirm('ลบวิดีโอ "' + v.title + '" ใช่ไหม? ลบแล้วกู้ไม่ได้')) return
+    const res = await supabase.from('videos').delete().eq('id', v.id)
+    if(res.error) return alert('ลบไม่สำเร็จ: ' + res.error.message)
+    try { if(v.file_path && !String(v.file_path).startsWith('http')) await supabase.storage.from('video-library-private').remove([v.file_path]) } catch(err) {}
+    alert('ลบแล้ว')
+    load(); loadPending()
+    if(view==='watch') setView('home')
+  }
   return <div style={{minHeight:'100vh',background:'#0a0a0f'}}>
     <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 28px',position:'sticky',top:0,background:'rgba(10,10,15,.9)',backdropFilter:'blur(12px)',zIndex:10,borderBottom:'1px solid #222'}}>
       <div onClick={()=>setView('home')} style={{fontFamily:'Space Grotesk',fontWeight:800,fontSize:26,cursor:'pointer'}}>BLOX<span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}> VIDEO</span></div>
       <div style={{display:'flex',gap:10}}>
-        <button onClick={()=>setView('home')} style={btn}>🏠 หน้าแรก</button><button onClick={()=>{setView('approval'); loadPending()}} style={btn}>📥 รออนุมัติ</button>
+        <button onClick={()=>setView('home')} style={btn}>🏠 หน้าแรก</button><button onClick={()=>setView('upload')} style={btn}>⬆ อัปโหลด</button>
         <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',fontWeight:700}}>👤 สมัครสมาชิก</button>
         <span style={{fontSize:12,padding:'8px 10px',background:isConfigured?'#14532d':'#7f1d1d',borderRadius:20}}>{isConfigured?'● เชื่อม Supabase แล้ว':'○ โหมดตัวอย่าง - ยังไม่ตั้งค่า Env'}</span>
       </div>
@@ -92,15 +105,15 @@ export default function App(){
     {view==='home' && <>
       <section style={{padding:'48px 28px 20px',textAlign:'center'}}>
         <h1 style={{fontSize:44,margin:0,lineHeight:1.1}}>คลังวิดีโอของคุณ<br/><span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}>สวย ทันสมัย เก็บเป็นหมวดหมู่</span></h1>
-        <p style={{color:'#aaa'}}>ฟรีด้วย Supabase + Vercel • อัปโหลดแล้วรออนุมัติ • เล่นผ่าน Signed URL แบบ Private</p>
+        <p style={{color:'#aaa'}}>ฟรีด้วย Supabase + Vercel • อัปโหลดแล้วขึ้นหน้าแรกทันที • เล่นผ่าน Signed URL แบบ Private</p>
         {/* ปุ่มอัปโหลดจุดเดียว - อยู่เหนือช่องค้นหา อยู่ตลอดทุกหมวดหมู่ ไม่หาย */}
-        <div style={{textAlign:'center',margin:'0 0 20px'}}>{user ? <button onClick={()=>setView('upload')} style={{...btn,background:'linear-gradient(90deg,#7c3aed,#06b6d4)',color:'#fff',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999,boxShadow:'0 8px 24px rgba(124,58,237,.4)'}}>⬆ อัปโหลดวิดีโอของคุณ</button> : <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999}}>👤 สมัครสมาชิกเพื่ออัปโหลด</button>}<p style={{color:'#888',fontSize:12,margin:'8px 0 0'}}>อัปโหลดแล้วไปรอการอนุมัติก่อน • กดปุ่มรออนุมัติข้างบนเพื่ออนุมัติทันที</p></div>
+        <div style={{textAlign:'center',margin:'0 0 20px'}}>{user ? <button onClick={()=>setView('upload')} style={{...btn,background:'linear-gradient(90deg,#7c3aed,#06b6d4)',color:'#fff',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999,boxShadow:'0 8px 24px rgba(124,58,237,.4)'}}>⬆ อัปโหลดวิดีโอของคุณ</button> : <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999}}>👤 สมัครสมาชิกเพื่ออัปโหลด</button>}<p style={{color:'#888',fontSize:12,margin:'8px 0 0'}}>อัปโหลดแล้วขึ้นหน้าแรกทันที • Auto อนุมัติ</p></div>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 ค้นหาวิดีโอ..." style={{width:'min(560px,90%)',padding:'14px 18px',borderRadius:999,border:'1px solid #333',background:'#15151f',color:'#fff',fontSize:16,marginTop:16}}/>
         <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap',marginTop:18}}>{['ทั้งหมด',...categories].map(c=><button key={c} onClick={()=>setCat(c)} style={{padding:'8px 16px',borderRadius:999,border:'none',background:cat===c?'#fff':'#1e1e2a',color:cat===c?'#000':'#fff',fontWeight:600}}>{c}</button>)}</div>
       </section>
       <main style={{padding:'20px 28px 60px',display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:18}}>
         {loading && <p>กำลังโหลด...</p>}
-        {!loading && filtered.length===0 && <div style={{gridColumn:'1/-1',textAlign:'center',padding:40,background:'#15151f',borderRadius:16}}><h3>ยังไม่มีวิดีโอในหมวดนี้</h3><p style={{color:'#aaa'}}>กดอัปโหลด แล้วไปเปลี่ยน status เป็น published ใน Supabase Dashboard</p><button onClick={()=>setView('upload')} style={{...btn,background:'#7c3aed',color:'#fff',border:'none'}}>อัปโหลดวิดีโอแรก</button></div>}
+        {!loading && filtered.length===0 && <div style={{gridColumn:'1/-1',textAlign:'center',padding:40,background:'#15151f',borderRadius:16}}><h3>ยังไม่มีวิดีโอในหมวดนี้</h3><p style={{color:'#aaa'}}>กดอัปโหลด แล้วคลิปจะขึ้นหน้าแรกทันที</p><button onClick={()=>setView('upload')} style={{...btn,background:'#7c3aed',color:'#fff',border:'none'}}>อัปโหลดวิดีโอแรก</button></div>}
         {filtered.map(v=>(
           <article key={v.id} onClick={()=>openVideo(v)} style={{background:'#15151f',borderRadius:16,overflow:'hidden',cursor:'pointer',border:'1px solid #26263a'}}>
             <div style={{height:150,background:v.cover,display:'flex',alignItems:'center',justifyContent:'center',fontSize:44}}>▶️<span style={{position:'absolute'}}></span><span style={{fontSize:12,background:'rgba(0,0,0,.6)',padding:'4px 8px',borderRadius:8,marginLeft:120}}>{v.duration}</span></div>
