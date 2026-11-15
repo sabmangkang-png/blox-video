@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { supabase, isConfigured, BUCKET } from './supabaseClient.js'
 
@@ -36,7 +35,19 @@ export default function App(){
     if(cats) setCategories(cats.map(c=>c.name))
     const {data, error} = await supabase.from('videos').select('*, video_categories(name)').eq('status','published').order('created_at',{ascending:false})
     if(error){ setMsg('โหลดวิดีโอไม่สำเร็จ: '+error.message); setVideos([]) } else {
-      setVideos((data||[]).map(v=>({id:v.id,title:v.title,description:v.description,category:v.video_categories?.name||'อื่น ๆ',duration:v.duration_seconds?Math.floor(v.duration_seconds/60)+':'+String(v.duration_seconds%60).padStart(2,'0'):'00:00',status:v.status,file_path:v.file_path,cover:'linear-gradient(135deg,#7c3aed,#06b6d4)'})))
+      const mapped = (data||[]).map(v=>({id:v.id,title:v.title,description:v.description,category:v.video_categories?.name||'อื่น ๆ',duration:v.duration_seconds?Math.floor(v.duration_seconds/60)+':'+String(v.duration_seconds%60).padStart(2,'0'):'00:00',status:v.status,file_path:v.file_path,owner_id:v.owner_id,cover:'linear-gradient(135deg,#7c3aed,#06b6d4)',playUrl:null}))
+      setVideos(mapped)
+      // สร้างหน้าปกให้ทุกคลิป - ดึง Signed URL ทีละคลิป
+      for(const v of mapped){
+        if(v.file_path && !String(v.file_path).startsWith('http')){
+          try{
+            const s = await supabase.storage.from('video-library-private').createSignedUrl(v.file_path, 3600)
+            if(s.data && s.data.signedUrl) setVideos(prev=>prev.map(x=>x.id===v.id?{...x,playUrl:s.data.signedUrl}:x))
+          }catch(e){}
+        } else if(v.file_path && String(v.file_path).startsWith('http')){
+          setVideos(prev=>prev.map(x=>x.id===v.id?{...x,playUrl:v.file_path}:x))
+        }
+      }
     }
     setLoading(false)
   }
@@ -59,6 +70,18 @@ export default function App(){
       const {error: e2} = await supabase.auth.signUp({email,password})
       if(e2) setMsg(e2.message); else setMsg('สมัครแล้ว เช็คอีเมลยืนยัน แล้วล็อกอินอีกครั้ง')
     } else { setUser(data.user); setMsg('ล็อกอินสำเร็จ'); setView('upload') }
+  }
+
+  async function deleteMyVideo(e, v){
+    if(e) e.stopPropagation()
+    if(!user) return alert('ต้องล็อกอินก่อนลบ')
+    if(!confirm('ลบวิดีโอ "' + v.title + '" ใช่ไหม? ลบแล้วกู้ไม่ได้')) return
+    const res = await supabase.from('videos').delete().eq('id', v.id)
+    if(res.error) return alert('ลบไม่สำเร็จ: ' + res.error.message + ' - ถ้ายังลบไม่ได้ ให้รัน SQL เปิดสิทธิ์ลบใน Supabase ก่อน')
+    try { if(v.file_path && !String(v.file_path).startsWith('http')) await supabase.storage.from('video-library-private').remove([v.file_path]) } catch(err) {}
+    alert('ลบแล้ว')
+    load()
+    if(view==='watch') setView('home')
   }
   async function handleUpload(e){
     e.preventDefault()
@@ -83,8 +106,8 @@ export default function App(){
   const filtered = videos.filter(v=> (cat==='ทั้งหมด'||v.category===cat) && v.title.toLowerCase().includes(q.toLowerCase()))
 
   return <div style={{minHeight:'100vh',background:'#0a0a0f'}}>
-    <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 28px',position:'sticky',top:0,background:'rgba(10,10,15,.9)',backdropFilter:'blur(12px)',zIndex:10,borderBottom:'1px solid #222'}}>
-      <div onClick={()=>setView('home')} style={{fontFamily:'Space Grotesk',fontWeight:800,fontSize:26,cursor:'pointer'}}>คลังวีดีโอ<span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}> • VIDEO LIBRARY</span></div>
+    <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 20px',position:'sticky',top:0,background:'rgba(10,10,15,.9)',backdropFilter:'blur(12px)',zIndex:10,borderBottom:'1px solid #222'}}>
+      <div onClick={()=>setView('home')} style={{fontFamily:'Space Grotesk',fontWeight:800,fontSize:22,whiteSpace:'nowrap',flexShrink:0,cursor:'pointer'}}>คลังวีดีโอ<span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}></span></div>
       <div style={{display:'flex',gap:10}}>
         <button onClick={()=>setView('home')} style={btn}>🏠 หน้าแรก</button><button onClick={()=>setLang(lang==='th'?'en':'th')} style={{...btn,background:'#fff',color:'#000',border:'none',fontWeight:800}}>🌐 {lang==='th'?'ไทย | EN':'TH | English'}</button>
         <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',fontWeight:700}}>👤 สมัครสมาชิก</button>
