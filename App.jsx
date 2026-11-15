@@ -27,6 +27,8 @@ export default function App(){
   const [loading,setLoading]=useState(true)
   const [pendingVideos,setPendingVideos]=useState([])
   const [lang,setLang]=useState('th')
+  const [metaLink,setMetaLink]=useState('')
+  const [linkLoading,setLinkLoading]=useState(false)
 
   async function load(){
     setLoading(true)
@@ -82,6 +84,36 @@ export default function App(){
     alert('ลบแล้ว')
     load()
     if(view==='watch') setView('home')
+  }
+
+  async function handleLinkUpload(e){
+    e.preventDefault()
+    if(!metaLink.trim()) return setMsg('วางลิงก์จาก Meta AI ก่อนนะ')
+    if(!user) return setMsg('ต้องล็อกอินก่อน')
+    setLinkLoading(true)
+    setMsg('กำลังดึงคลิปจาก Meta AI เข้า Supabase... รอแป๊บนึง อย่าปิดหน้านี้')
+    try{
+      const res = await fetch(metaLink.trim())
+      if(!res.ok) throw new Error('ดึงลิงก์ไม่ได้ สถานะ ' + res.status)
+      const blob = await res.blob()
+      if(blob.size===0) throw new Error('ไฟล์ว่าง')
+      if(blob.size > 100*1024*1024) throw new Error('ไฟล์ใหญ่เกิน 100MB')
+      const videoId = crypto.randomUUID()
+      const safeName = 'video-' + Date.now() + '.mp4'
+      const path = `${user.id}/${videoId}/${safeName}`
+      const up = await supabase.storage.from('video-library-private').upload(path, blob, {contentType:'video/mp4', upsert:false})
+      if(up.error) throw new Error(up.error.message)
+      const catRow = categories.includes(uploadCat) ? null : null
+      const catRes = await supabase.from('video_categories').select('id').eq('name', uploadCat || categories[0] || 'อื่น ๆ').single()
+      const ins = await supabase.from('videos').insert({id: videoId, title: uploadTitle || 'คลิปจาก Meta AI', description: uploadDesc || 'คลิปจาก Meta AI - ดึงจากลิงก์อัตโนมัติ', category_id: catRes.data?.id, owner_id: user.id, file_path: path, file_size: blob.size, mime_type: 'video/mp4', status:'published'})
+      if(ins.error) throw new Error(ins.error.message)
+      setMsg('ดึงคลิปเข้า Supabase สำเร็จแล้ว! ขึ้นหน้าแรกทันที')
+      setMetaLink(''); setUploadTitle(''); setUploadDesc('')
+      load(); setView('home')
+    }catch(err){
+      setMsg('ดึงอัตโนมัติไม่ได้: ' + err.message + ' | วิธีสำรอง: เปิดลิงก์นั้นใน Chrome > กด Download > แล้วอัปโหลดไฟล์ด้านล่างแทน')
+    }
+    setLinkLoading(false)
   }
   async function handleUpload(e){
     e.preventDefault()
@@ -181,6 +213,18 @@ export default function App(){
     {view==='login' && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,border:'1px solid #333'}}><div style={{textAlign:'center'}}><div style={{fontSize:48}}>👤</div><h2>{authMode==='signup'?'สมัครสมาชิกฟรี':'เข้าสู่ระบบ'}</h2><p style={{color:'#aaa',fontSize:13}}>{authMode==='signup'?'สมัครครั้งเดียว อัปโหลดวิดีโอได้เลย':'มีบัญชีแล้ว? ล็อกอินเพื่ออัปโหลด'}</p></div><div style={{display:'flex',gap:8,marginBottom:16}}><button onClick={()=>setAuthMode('login')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='login'?'#fff':'#222',color:authMode==='login'?'#000':'#fff',fontWeight:700}}>เข้าสู่ระบบ</button><button onClick={()=>setAuthMode('signup')} style={{flex:1,padding:10,borderRadius:10,border:'none',background:authMode==='signup'?'#7c3aed':'#222',color:'#fff',fontWeight:700}}>สมัครสมาชิก</button></div><form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:12}}><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="อีเมล เช่น sabmangkang@gmail.com" style={inp}/><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" style={inp}/><button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontWeight:700,fontSize:16}}>{authMode==='signup'?'✅ สมัครสมาชิกฟรี':'🔑 เข้าสู่ระบบ'}</button></form><p style={{fontSize:13,color:'#aaa',textAlign:'center'}}>{authMode==='signup'?'สมัครแล้ว ระบบจะพาไปหน้าอัปโหลดทันที':'ยังไม่มีบัญชี? กดปุ่ม สมัครสมาชิก ด้านบน'}</p><p>{msg}</p></main>}
 
     {view==='upload' && !user && <main style={{maxWidth:440,margin:'40px auto',background:'#15151f',padding:28,borderRadius:20,textAlign:'center'}}><div style={{fontSize:48}}>🔒</div><h2>ต้องสมัครสมาชิกก่อนอัปโหลด</h2><p style={{color:'#aaa'}}>สมัครฟรี 1 นาที แล้วอัปโหลดวิดีโอได้เลย</p><button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:14,fontSize:16,fontWeight:700}}>👤 สมัครสมาชิกฟรี</button><br/><br/><button onClick={()=>{setAuthMode('login'); setView('login')}} style={btn}>มีบัญชีแล้ว? เข้าสู่ระบบ</button></main>}{view==='upload' && user && <main style={{maxWidth:560,margin:'40px auto',background:'#15151f',padding:24,borderRadius:16}}><h2>อัปโหลดวิดีโอ</h2><p style={{color:'#aaa',fontSize:13}}>ผู้ใช้: {user?.email} • ไฟล์จะเข้า bucket video-library-private แบบ private • สถานะเริ่มต้น published</p>
+      <div style={{background:'#1e1e2a',borderRadius:16,padding:16,marginBottom:16,border:'1px solid #f59e0b'}}>
+        <h3 style={{margin:'0 0 8px'}}>🔗 วางลิงก์จาก Meta AI - ดึงเข้า Supabase อัตโนมัติ</h3>
+        <p style={{color:'#aaa',fontSize:13,margin:'0 0 12px'}}>Meta AI สร้างคลิปเสร็จ ได้ลิงก์มา → ก๊อปลิงก์มาวางตรงนี้ → กดดึง ระบบจะดึงไฟล์มาเก็บใน Supabase ให้เอง ไม่ต้องโหลดลงคอมก่อน</p>
+        <form onSubmit={handleLinkUpload} style={{display:'flex',flexDirection:'column',gap:10}}>
+          <input value={metaLink} onChange={e=>setMetaLink(e.target.value)} placeholder="วางลิงก์ .mp4 จาก Meta AI ตรงนี้ เช่น https://.../video.mp4" style={inp} />
+          <input value={uploadTitle} onChange={e=>setUploadTitle(e.target.value)} placeholder="ชื่อคลิป (ถ้าไม่ใส่จะใช้ชื่อ คลิปจาก Meta AI)" style={inp} />
+          <select value={uploadCat} onChange={e=>setUploadCat(e.target.value)} style={inp}>{categories.map(c=><option key={c}>{c}</option>)}</select>
+          <button disabled={linkLoading} style={{...btn,background:'#f59e0b',color:'#000',border:'none',padding:12,fontWeight:800}}>{linkLoading?'กำลังดึง... รอแป๊บนึง':'📥 ดึงคลิปเข้า Supabase อัตโนมัติ'}</button>
+        </form>
+        <p style={{fontSize:12,color:'#888',margin:'10px 0 0'}}>ถ้าลิงก์นั้น Meta ปิดกั้นไม่ให้ดึงตรงๆ ระบบจะบอกวิธีสำรองให้ คือ เปิดลิงก์ > กด Download > อัปโหลดไฟล์ด้านล่างแทน</p>
+      </div>
+      <div style={{textAlign:'center',color:'#888',margin:'8px 0'}}>— หรือ อัปโหลดไฟล์จากเครื่อง —</div>
       <form onSubmit={handleUpload} style={{display:'flex',flexDirection:'column',gap:12}}>
         <input value={uploadTitle} onChange={e=>setUploadTitle(e.target.value)} placeholder="ชื่อวิดีโอ" required style={inp}/>
         <textarea value={uploadDesc} onChange={e=>setUploadDesc(e.target.value)} placeholder="คำอธิบาย" style={{...inp,minHeight:80}}/>
@@ -189,7 +233,7 @@ export default function App(){
         {file && <p style={{fontSize:13}}>ไฟล์: {file.name} • {(file.size/1024/1024).toFixed(2)} MB {file.size>100*1024*1024 && '⚠️ เกิน 100MB ตาม limit bucket'}</p>}
         <button style={{...btn,background:'#7c3aed',color:'#fff',border:'none',padding:12}}>อัปโหลด (จะได้สถานะ published)</button>
       </form><p>{msg}</p>
-      <div style={{background:'#0a0a0f',padding:12,borderRadius:10,fontSize:12,color:'#aaa',marginTop:12}}>ขั้นตอนอนุมัติ: Supabase Dashboard → Table Editor → videos → เปลี่ยน status เป็น published + ใส่ published_at = now() → วิดีโอจะโชว์หน้าแรกทันที</div>
+      <div style={{background:'#0a0a0f',padding:12,borderRadius:10,fontSize:12,color:'#aaa',marginTop:12}}>Auto อนุมัติ: อัปโหลดเสร็จขึ้นหน้าแรกทันที ไม่ต้องไปแก้ status ใน Supabase แล้ว</div>
     </main>}
 
     <footer style={{textAlign:'center',padding:24,color:'#666',fontSize:13}}>BLOX Video Library • Supabase + Vercel Free • อย่าใส่ service_role key ในเว็บ</footer>
