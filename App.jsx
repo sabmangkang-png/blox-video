@@ -35,7 +35,7 @@ export default function App(){
     if(cats) setCategories(cats.map(c=>c.name))
     const {data, error} = await supabase.from('videos').select('*, video_categories(name)').eq('status','published').order('created_at',{ascending:false})
     if(error){ setMsg('โหลดวิดีโอไม่สำเร็จ: '+error.message); setVideos([]) } else {
-      setVideos((data||[]).map(v=>({id:v.id,title:v.title,description:v.description,category:v.video_categories?.name||'อื่น ๆ',duration:v.duration_seconds?Math.floor(v.duration_seconds/60)+':'+String(v.duration_seconds%60).padStart(2,'0'):'--:--',status:v.status,file_path:v.file_path,cover:'linear-gradient(135deg,#7c3aed,#06b6d4)'})))
+      setVideos((data||[]).map(v=>({id:v.id,title:v.title,description:v.description,category:v.video_categories?.name||'อื่น ๆ',duration:v.duration_seconds?Math.floor(v.duration_seconds/60)+':'+String(v.duration_seconds%60).padStart(2,'0'):'00:00',status:v.status,file_path:v.file_path,cover:'linear-gradient(135deg,#7c3aed,#06b6d4)'})))
     }
     setLoading(false)
   }
@@ -90,12 +90,11 @@ export default function App(){
     </header>
 
     {view==='home' && <>
-      }
       <section style={{padding:'48px 28px 20px',textAlign:'center'}}>
         <h1 style={{fontSize:44,margin:0,lineHeight:1.1}}>คลังวิดีโอของคุณ<br/><span style={{background:'linear-gradient(90deg,#a855f7,#06b6d4)',WebkitBackgroundClip:'text',color:'transparent'}}>สวย ทันสมัย เก็บเป็นหมวดหมู่</span></h1>
         <p style={{color:'#aaa'}}>ฟรีด้วย Supabase + Vercel • อัปโหลดแล้วรออนุมัติ • เล่นผ่าน Signed URL แบบ Private</p>
         {/* ปุ่มอัปโหลดจุดเดียว - อยู่เหนือช่องค้นหา อยู่ตลอดทุกหมวดหมู่ ไม่หาย */}
-        <div style={{textAlign:'center',margin:'0 0 20px'}}>{user ? <button onClick={()=>setView('upload')} style={{...btn,background:'linear-gradient(90deg,#7c3aed,#06b6d4)',color:'#fff',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999,boxShadow:'0 8px 24px rgba(124,58,237,.4)'}}>⬆ อัปโหลดวิดีโอของคุณ (ระบบจะแคปภาพปกให้อัตโนมัติ)</button> : <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999}}>👤 สมัครสมาชิกเพื่ออัปโหลด</button>}<p style={{color:'#888',fontSize:12,margin:'8px 0 0'}}>อัปโหลดแล้วขึ้นหน้าแรกทันที</p></div>
+        <div style={{textAlign:'center',margin:'0 0 20px'}}>{user ? <button onClick={()=>setView('upload')} style={{...btn,background:'linear-gradient(90deg,#7c3aed,#06b6d4)',color:'#fff',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999,boxShadow:'0 8px 24px rgba(124,58,237,.4)'}}>⬆ อัปโหลดวิดีโอของคุณ</button> : <button onClick={()=>{setAuthMode('signup'); setView('login')}} style={{...btn,background:'#fff',color:'#000',border:'none',padding:'14px 32px',fontSize:16,fontWeight:800,borderRadius:999}}>👤 สมัครสมาชิกเพื่ออัปโหลด</button>}<p style={{color:'#888',fontSize:12,margin:'8px 0 0'}}>อัปโหลดแล้วไปรอการอนุมัติก่อน</p></div>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 ค้นหาวิดีโอ..." style={{width:'min(560px,90%)',padding:'14px 18px',borderRadius:999,border:'1px solid #333',background:'#15151f',color:'#fff',fontSize:16,marginTop:16}}/>
         <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap',marginTop:18}}>{['ทั้งหมด',...categories].map(c=><button key={c} onClick={()=>setCat(c)} style={{padding:'8px 16px',borderRadius:999,border:'none',background:cat===c?'#fff':'#1e1e2a',color:cat===c?'#000':'#fff',fontWeight:600}}>{c}</button>)}</div>
       </section>
@@ -105,7 +104,7 @@ export default function App(){
         {filtered.map(v=>(
           <article key={v.id} onClick={()=>openVideo(v)} style={{background:'#15151f',borderRadius:16,overflow:'hidden',cursor:'pointer',border:'1px solid #26263a'}}>
             <div style={{height:150,background:v.cover,display:'flex',alignItems:'center',justifyContent:'center',fontSize:44}}>▶️<span style={{position:'absolute'}}></span><span style={{fontSize:12,background:'rgba(0,0,0,.6)',padding:'4px 8px',borderRadius:8,marginLeft:120}}>{v.duration}</span></div>
-            <div style={{padding:14}}><span style={{fontSize:12,background:'#7c3aed',padding:'3px 8px',borderRadius:999}}>{v.category}</span><h3 style={{margin:'10px 0 6px'}}>{v.title}</h3><p style={{color:'#aaa',fontSize:13,margin:0}}>{v.description}</p></div>
+            <div style={{padding:14}}><span style={{fontSize:12,background:'#7c3aed',padding:'3px 8px',borderRadius:999}}>{v.category}</span><h3 style={{margin:'10px 0 6px'}}>{v.title}</h3><p style={{color:'#aaa',fontSize:13,margin:0}}>{v.description}</p>{user && v.owner_id===user.id && <button onClick={(e)=>deleteMyVideo(e,v)} style={{marginTop:10,background:'#ef4444',color:'#fff',border:'none',padding:'8px 12px',borderRadius:8,cursor:'pointer',fontWeight:700}}>🗑️ ลบวิดีโอนี้</button>}</div>
           </article>
         ))}
       </main>
@@ -172,4 +171,3 @@ export default function App(){
 }
 const btn={padding:'8px 14px',borderRadius:999,border:'1px solid #333',background:'#1e1e2a',color:'#fff'}
 const inp={padding:'12px',borderRadius:10,border:'1px solid #333',background:'#0a0a0f',color:'#fff'}
-
